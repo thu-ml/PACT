@@ -96,7 +96,7 @@ PACT/policy/DP/checkpoints/
 └── stack_blocks_two-demo_randomized-200-0/600.ckpt
 ```
 
-Download the pre-generated instruction dataset from [Hugging Face](https://huggingface.co/datasets/Ethan-pooh/pact), and organize it as follows:
+Download the pre-generated instruction dataset `data.tar.gz` from [Hugging Face](https://huggingface.co/datasets/Ethan-pooh/pact), and organize it as follows:
 
 ```bash
 # generally, the structure is as follows:
