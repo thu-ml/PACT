@@ -568,6 +568,9 @@ def energy_handover_block(
         left_gripper_directions["forward"]      # [N,3]
     )                                           # [N]
 
+    # DP base policies may keep the right gripper nearly stationary on this task.
+    # This auxiliary distance term encourages right-hand motion toward the object.
+    # For policies without this failure mode (e.g., DP3 or RDT), this term can be removed.
     cost3_r = (
         float(r_distance)
         * 3.0
