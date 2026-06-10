@@ -219,7 +219,6 @@ def energy_place_dual_shoes(
     left_arm_dim  = S_left.shape[-1]   # 6
     right_arm_dim = S_right.shape[-1]  # 6
 
-    # gripper open(1)/close(0)
     q_gripper_left  = trajectory_unnormed[0, :, left_arm_dim].clone().detach()                    # [N]
     q_gripper_right = trajectory_unnormed[0, :, left_arm_dim + right_arm_dim + 1].clone().detach()# [N]
 
@@ -229,10 +228,6 @@ def energy_place_dual_shoes(
     loss = trajectory_unnormed.sum() * 0.0
     loss_info: Dict[str, list] = {}
 
-    # ============================================================
-    # 时间权重（并行）
-    # 原逻辑：从 start_index 开始线性升高，并 clamp 到 lower_bound
-    # ============================================================
     lower_bound = 0.1
     upper_bound = 0.75
     start_index = 2
@@ -242,22 +237,14 @@ def energy_place_dual_shoes(
     weight_time_tensor = (t - start_index) / denom * (upper_bound - lower_bound) + lower_bound
     weight_time_tensor = torch.clamp(weight_time_tensor, min=lower_bound)  # [N]
 
-    # ============================================================
-    # FK（批量一次算好，后面各项共享）
-    # ============================================================
     left_gripper_positions, left_gripper_directions = get_gripper_keypoints_batch(
         S_left, M_left, actions[:, :7], left_gripper_bias
     )
     right_gripper_positions, right_gripper_directions = get_gripper_keypoints_batch(
         S_right, M_right, actions[:, 7:], right_gripper_bias
     )
-    # forward/top: [N,3]
 
-    # ============================================================
-    # 1) poking（并行）
-    # ============================================================
     if l_poking or r_poking:
-        # print('Computing poking loss...')
         cost3_l_raw = grippers_poking_cost_batch(
             left_shoe_pos,                               # [3]
             left_gripper_positions["forward"],           # [N,3]
@@ -281,12 +268,7 @@ def energy_place_dual_shoes(
             "r_poking": [round((x * float(r_poking)).item(), 4) for x in cost3_r_raw],
         })
 
-    # ============================================================
-    # 2) rotate_grip（本来就 batch，这里主要把 FK 调用换成 batch）
-    #    仅最后关节参与角度对齐梯度：actions_grad_masked
-    # ============================================================
     if l_rotate_grip or r_rotate_grip:
-        # print('Computing rotate_grip loss...')
         last_action_left  = actions[:, 5]   # [N]
         last_action_right = actions[:, 12]  # [N]
 
@@ -314,8 +296,8 @@ def energy_place_dual_shoes(
             shoe_forward_direction: torch.Tensor,   # [3]
             gripper_directions: Dict[str, torch.Tensor], # each [N,3]
             q_gripper: torch.Tensor,                # [N]
-            actions: torch.Tensor,                  # [N,14] (unused but kept for signature compatibility)
-            weight_time_tensor: torch.Tensor,        # [N] (unused in your current logic)
+            actions: torch.Tensor,                  # [N,14]
+            weight_time_tensor: torch.Tensor,       # [N]
             device
         ):
             gripper_up   = gripper_directions["top"].double()      # [N,3]
@@ -329,13 +311,12 @@ def energy_place_dual_shoes(
             delta_down = angle_diff_batch(target, gripper_down)  # [N]
             delta_down = _process_angle_wrap(delta_down)
 
-            # 用 sum 更小的那一支（标量分支，没必要强行向量化）
             if delta_top.sum() < delta_down.sum():
                 delta = delta_top
             else:
                 delta = delta_down
 
-            cost_list = activate_angle_loss(delta) * q_gripper  # [N]  (你原代码已经去掉了 weight_time_tensor)
+            cost_list = activate_angle_loss(delta) * q_gripper  # [N]
             return cost_list.sum(), [round(x.item(), 4) for x in cost_list]
 
         cost_rotate_alpha = 0.1
@@ -354,9 +335,6 @@ def energy_place_dual_shoes(
             loss = loss + _loss * cost_rotate_alpha
             loss_info["r_rotate_grip"] = _series
         
-
-        # 加一个功能轴对齐的损失
-        # 直接规定为向上
         left_shoe_functional_dir = torch.tensor([0.0, 0.0, 1.0], device=trajectory_unnormed.device).double()
         right_shoe_functional_dir = torch.tensor([0.0, 0.0, 1.0], device=trajectory_unnormed.device).double()
 
@@ -386,24 +364,18 @@ def energy_place_dual_shoes(
             loss = loss + cost_align_r.sum() * alpha_align
             loss_info['r_align'] = [round((x * r_poking).item(), 4) for x in cost_align_r_list]
 
-
-    # ============================================================
-    # 3) rotate_put_in（本来就 batch，这里只去掉 repeat + 保持并行）
-    # ============================================================
     if l_rotate_put_in or r_rotate_put_in:
-        # print('Computing rotate_put_in loss...')
-         # 夹具 动作：1 打开  0 闭合
         q_gripper_shoebox_left  = trajectory_unnormed[0, :, left_arm_dim].clone().detach()                     # [N]
         q_gripper_shoebox_right = trajectory_unnormed[0, :, left_arm_dim + right_arm_dim + 1].clone().detach() # [N]
 
         q_gripper_shoebox_left = torch.where(q_gripper_shoebox_left < 0.5, torch.zeros_like(q_gripper_shoebox_left), q_gripper_shoebox_left)
         q_gripper_shoebox_right = torch.where(q_gripper_shoebox_right < 0.5, torch.zeros_like(q_gripper_shoebox_right), q_gripper_shoebox_right)
 
-        q_use_left  = 1.0 - q_gripper_shoebox_left   # [N] 闭合才施加
+        q_use_left  = 1.0 - q_gripper_shoebox_left   # [N]
         q_use_right = 1.0 - q_gripper_shoebox_right  # [N]
 
         def rotate_toward_shoebox(
-            target_forward: torch.Tensor,                 # [3]
+            target_forward: torch.Tensor,                  # [3]
             gripper_dirs: Dict[str, torch.Tensor],         # each [N,3]
             q_use: torch.Tensor,                           # [N]
             weight_time_tensor: torch.Tensor,              # [N]
@@ -435,21 +407,15 @@ def energy_place_dual_shoes(
             loss = loss + _loss * cost_rotate_alpha
             loss_info["r_rotate_put_in"] = _series
 
-    # ============================================================
-    # 4) r_release_grip（去 loop：mask + 向量化 time weight）
-    # ============================================================
     if r_release_grip:
-        # print('Computing r_release_grip loss...')
         q_gripper_shoebox_right = trajectory_unnormed[0, :, left_arm_dim + right_arm_dim + 1]  # [N]
 
         right_z = right_gripper_positions["forward"][:, 2]  # [N]
         mask = (right_z < shoe_box_release_height_threshold).to(q_gripper_shoebox_right.dtype)  # [N]
 
-        # 原逻辑：weight_time = max((t-1)/N, 1/N)
         tt = torch.arange(N, device=trajectory_unnormed.device, dtype=q_gripper_shoebox_right.dtype)  # [N]
         w = torch.clamp((tt - 1.0) / float(N), min=1.0 / float(N))  # [N]
 
-        # 原逻辑：低于阈值时 cost = -q_gripper * weight
         cost_release_right = (-q_gripper_shoebox_right) * w * mask   # [N]
 
         cost_rotate_alpha = 10.0
@@ -530,7 +496,7 @@ def energy_handover_block(
         trajectory_unnormed: torch.Tensor, 
         device: torch.device = None
         ):
-   # env meta: static information
+    # env meta: static information
     # tensors
     S_left = env_meta['S_left'].to(device)
     M_left = env_meta['M_left'].to(device)
@@ -599,7 +565,7 @@ def energy_stack_blocks_two(
         trajectory_unnormed: torch.Tensor, # [1, 8, 14]
         device: torch.device = None
         ):
-   # env meta: static information
+    # env meta: static information
     # tensors
     S_left = env_meta['S_left'].to(device)
     M_left = env_meta['M_left'].to(device)

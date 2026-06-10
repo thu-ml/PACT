@@ -1,6 +1,6 @@
 # Task-Specific Seeds
 
-This directory contains task-specific seeds pre-generated for each task to ensure experimental reproducibility.
+This directory contains task-specific seeds pre-generated for each task.
 
 Following the practice of RoboTwin, we verify these seeds with the cuRobo expert solver to ensure their feasibility.
 
