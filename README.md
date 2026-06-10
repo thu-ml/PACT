@@ -159,11 +159,10 @@ We gratefully acknowledge the authors of [RoboTwin](https://robotwin-platform.gi
 If you find our work helpful, please cite us:
 
 ```bibtex
-@inproceedings{wu2026pact,
-  title={PACT: Self-Evolving Physical Safety Alignment for Diffusion Policies in Embodied Manipulation},
+@article{wu2026pact,
+  title={PACT: Self-Evolving Physical Safety Alignment for Diffusion Policies in Embodied Manipulation}, 
   author={Wu, Lingxuan and Zhu, Zijian and Wang, Lizhong and Ying, Chengyang and Chen, Huayu and Yang, Xiao and Liu, Fangming and Zhu, Jun},
-  booktitle={Proceedings of the 43rd International Conference on Machine Learning},
+  journal={arXiv preprint arXiv:2606.08414},
   year={2026},
-  url={https://github.com/thu-ml/PACT}
 }
 ```
