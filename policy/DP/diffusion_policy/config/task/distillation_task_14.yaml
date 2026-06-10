@@ -1,0 +1,7 @@
+defaults:
+  - default_task_14
+  - _self_
+
+dataset:
+  _target_: diffusion_policy.dataset.robot_distillation_dataset.RobotImageDistillationDataset
+  env_keys: null

@@ -1,0 +1,20 @@
+defaults:
+  - on_policy_robot_dp_distillation_14
+  - _self_
+  - override task: distillation_task_14
+
+name: robot_on_policy_distillation_${task.name}
+_target_: diffusion_policy.workspace.robot_on_policy_distillation_multigpu_workspace.RobotOnPolicyDistillationWorkspace
+run_time: null   # global runtime accross all processes
+
+training:
+  sample_every: 1
+
+hydra:
+  job:
+    override_dirname: ${name}
+  run:
+    dir: playground/dp/${task_name}/${run_time}_${name}
+  sweep:
+    dir: playground/dp/${task_name}/${run_time}_${name}
+    subdir: ${hydra.job.num}

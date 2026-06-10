@@ -1,0 +1,84 @@
+defaults:
+  - robot_dp_14
+  - _self_
+  - override task: distillation_task_14
+
+name: robot_on_policy_distillation_${task.name}
+_target_: diffusion_policy.workspace.robot_on_policy_distillation_workspace.RobotOnPolicyDistillationWorkspace
+
+pretrained_ckpt: null
+
+rollout:
+  # we have num_batches_per_epoch x worker_per_gpu x #gpus 
+  # rollout processes running in parallel
+  num_batches_per_epoch: 72  # !
+  # for single gpu training
+  # in case of multgpu training
+  # directly use the worldsize as the number of gpus
+  gpus: [0, 1]
+
+  env:
+    policy_name: DP
+    task_name: null  # FIXME: to be set to null for generalization
+    collect_max_steps: null
+    task_config: onpolicy_randomized
+    ckpt_setting: demo_randomized
+    seed: 0
+    instruction_type: unseen
+    # expert_data_num: 200
+    # checkpoint_num: 600
+    head_camera_type: D435
+    save_env_info: True
+    train_config: robot_dp_onpolicy_distill_14_logging
+    # training_num_epochs: 5
+    max_seed_num: 1000
+    # iteration_times: 3
+    worker_per_gpu: 1
+    collect_num_per_worker: ${rollout.num_batches_per_epoch}
+    
+    # pre-construct variables
+    collect_num: ${rollout.env.collect_num_per_worker}
+    save_path: null
+    ckpt_path: null
+    use_ema: null
+    seed_list: null
+    task_idx: null
+
+    # pld
+    # taken over at (max_steps * pld_recover_ratio)
+    # i.e. only use guided teacher policy when pld_recover_ratio = 0.0
+    # according to the paper, pld_recover_ratio = 0.6 is the best
+    # if this hyperparameter is not specified, the default value is null (<-> 0.0), which means only use guided teacher policy
+    use_pld: True
+    pld_recover_ratio: null
+
+    stagecut: False
+  
+  
+  cache_dir: null
+  seed_list: data_task_seeds/${rollout.env.task_name}/demo_randomized/train_seed.txt
+    
+dataloader:
+  batch_size: 64
+
+optimizer:
+  lr: 1.0e-5  # !
+
+training:
+  checkpoint_every: 1
+  num_epochs: 20
+  num_inner_epochs: 100  # !
+  max_grad_norm: 1.0
+  decay_type: 0   # ! 0 hard, 1 soft
+  timeout: 7200 # 2 hours
+
+  teacher_model_base: "old" # "ref" or "old"
+
+distillation:
+  env_meta_path: data/env_meta.pkl
+  use_self_distillation: False
+  min_guidance_scale: null
+  max_guidance_scale: null
+  guidance_iterations: null
+  max_timesteps_for_guidance: null
+

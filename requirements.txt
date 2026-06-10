@@ -1,0 +1,4 @@
+accelerate
+dill
+einops
+diffusers==0.34.0

@@ -1,0 +1,34 @@
+{
+  "full_description": "pick up one bottle with the left hand, pick up one cup with the right hand, then pour water from the bottle into the cup",
+  "schema": "{A} is the bottle to be picked by the left hand, {B} is the cup to be picked by the right hand, and the action continues by pouring water from {A} into {B}",
+  "preference": "num of words should not exceed 15. Degree of detail avg 6",
+  "seen": [
+    "Hold {A} in left hand, {B} in right, pour water.",
+    "Pick {A} left, {B} right, then pour into {B}.",
+    "Use left hand for {A}, right for {B}, pour water in.",
+    "Grab {A} left, {B} right, pour water from {A} to {B}.",
+    "Lift {A} with left hand, hold {B} with right, pour inside.",
+    "Take {A} using left hand, {B} using right, then pour.",
+    "Hold {A} left, {B} right, tilt {A} to pour water.",
+    "Use both hands: left for {A}, right for {B}, pour gently.",
+    "Pick up {A} left, {B} right, and pour {A}'s water in.",
+    "Hold {A} in left, {B} in right, pour water from one to another.",
+    "Grasp {A} left hand, {B} right hand, pour from {A} into {B}.",
+    "Lift {A} left hand, steady {B} right hand, pour water.",
+    "Hold {A} with left hand, {B} with right, then tilt {A}.",
+    "Pick {A} left, {B} right, pour contents from {A} into {B}.",
+    "Use left for {A}, right for {B}, pour water down."
+  ],
+  "unseen": [
+    "Pick {A} with left, {B} with right, pour water.",
+    "Hold {A} left, {B} right, then pour.",
+    "Use left hand for {A}, right for {B}, pour in.",
+    "Lift {A} left hand, {B} right hand, pour water into {B}.",
+    "Grab {A} left, {B} right, then pour from {A}.",
+    "Take {A} in left hand, {B} in right, pour contents.",
+    "Hold {A} left, hold {B} right, pour water slowly.",
+    "Pick up {A} left, {B} right, pour into {B}.",
+    "Raise {A} left, steady {B} right, pour water in.",
+    "Use left hand for {A}, right for {B}, then tilt {A}."
+  ]
+}

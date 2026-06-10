@@ -1,0 +1,40 @@
+# python generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# venv
+.venv
+
+data/datasets
+logs/
+checkpoints/
+outputs/
+wandb/
+*.log
+*.err
+
+# assets
+assets/background_texture.zip
+assets/embodiments.zip
+assets/objects.zip
+assets/objects/
+assets/embodiments/
+assets/background_texture/
+
+__MACOSX
+
+Qwen
+Qwen2.5-VL/
+tmp/
+data_local/
+tests/
+hostfile*.txt
+.deepspeed_env
+.vscode
+legacy/
+
+playground/*
