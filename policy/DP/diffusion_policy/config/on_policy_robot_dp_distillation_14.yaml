@@ -19,7 +19,7 @@ rollout:
 
   env:
     policy_name: DP
-    task_name: null  # FIXME: to be set to null for generalization
+    task_name: null
     collect_max_steps: null
     task_config: onpolicy_randomized
     ckpt_setting: demo_randomized
@@ -49,7 +49,7 @@ rollout:
     # i.e. only use guided teacher policy when pld_recover_ratio = 0.0
     # according to the paper, pld_recover_ratio = 0.6 is the best
     # if this hyperparameter is not specified, the default value is null (<-> 0.0), which means only use guided teacher policy
-    use_pld: True
+    use_pld: False
     pld_recover_ratio: null
 
     stagecut: False
