@@ -122,9 +122,14 @@ def energy_pour_water_to_cup(
     # ===== env state =====
     l_poking = env_state['l_poking']
     r_poking = env_state['r_poking']
+    l_tilt   = env_state['l_tilt']
 
     bottle_pos = env_state['bottle_pos'].to(device)  # [3]
     cup_pos    = env_state['cup_pos'].to(device)     # [3]
+
+    bottle_top_to_functional_offset = env_state['bottle_top_to_functional_offset']  # float
+    cup_top_to_functional_offset    = env_state['cup_top_to_functional_offset']     # float
+    # stage = env_state['stage']  # Unused in the original implementation.
 
     # ===== dims / actions =====
     actions = trajectory_unnormed[0]  # [N, 14]
@@ -144,13 +149,19 @@ def energy_pour_water_to_cup(
     loss = trajectory_unnormed.sum() * 0.0
     loss_info: Dict[str, list] = {}
 
+    # ===== FK batch (computed once and reused below) =====
     left_pos, left_dir = get_gripper_keypoints_batch(
         S_left, M_left, actions[:, :7], left_gripper_bias
     )
     right_pos, right_dir = get_gripper_keypoints_batch(
         S_right, M_right, actions[:, 7:], right_gripper_bias
     )
+    # left_pos["forward"], left_dir["forward"/"top"]: [N,3]
+    # right_pos["forward"], right_dir["forward"/"top"]: [N,3]
 
+    ################################
+    # 1) Batched grasp alignment loss (poking)
+    ################################
     if l_poking or r_poking:
         cost3_l_raw = grippers_poking_cost_batch(
             bottle_pos,                 # [3]
@@ -173,6 +184,39 @@ def energy_pour_water_to_cup(
             "l_poking": [round((x * float(l_poking)).item(), 4) for x in cost3_l_raw],
             "r_poking": [round((x * float(r_poking)).item(), 4) for x in cost3_r_raw],
         })
+
+    ###############################
+    # 2) Batched tilt-initiation objective
+    ###############################
+    if l_tilt:
+        # bottle top position: forward + top_dir * offset
+        # The top direction returned by get_gripper_keypoints_batch is already normalized.
+        bottle_top_positions = left_pos["forward"] + left_dir["top"] * float(bottle_top_to_functional_offset)  # [N,3]
+        cup_top_positions    = right_pos["forward"] + right_dir["top"] * float(cup_top_to_functional_offset)  # [N,3]
+
+        # Original logic: use cup_top_positions.detach()[t], so this right-hand term does not backpropagate.
+        cup_top_positions_detach = cup_top_positions.detach()  # [N,3]
+
+        cup_up_direction = right_dir["top"]  # [N,3]
+        cost_l_tilt = behavior_alignment_cost_batch(
+                                        cup_up_direction.detach()[0],  # Use the first-step cup up direction as the target direction.
+                                        bottle_top_positions, 
+                                        cup_top_positions_detach[0],
+                                        keypoints_offset=0.037, # Inspect this value if tuning is needed.
+                                        lambda_param=1,
+                                        )
+
+        # Toggle time weighting for ablation.
+        use_time = False
+        # use_time = True
+        if use_time:
+            t = torch.arange(N, device=actions.device, dtype=actions.dtype)   # [N]
+            weights = 2.0 * (t + 1.0)                                         # [N]
+            cost_l_tilt = weights * cost_l_tilt                               # [N]
+
+
+        loss = loss + cost_l_tilt.sum()
+        loss_info["l_tilt"] = [round(x.item(), 4) for x in cost_l_tilt]
 
     return loss, loss_info
 

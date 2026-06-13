@@ -17,7 +17,7 @@
 
 PACT is a **self-evolving post-training framework** for aligning diffusion policies with physical safety constraints in embodied manipulation. Starting from pretrained diffusion policies, PACT uses **self-rollouts** and automatically computed **physical constraints** to distill constraint gradients into the policy, improving safety **without requiring demonstrations, task rewards, interventions, or outcome annotations**.
 
-This repository contains the code for running PACT on [RoboTwin](https://robotwin-platform.github.io)-based manipulation tasks, including base-policy evaluation, on-policy distillation, and post-training policy evaluation.
+This repository contains the code for running PACT for robotic manipulation tasks on [RoboTwin](https://robotwin-platform.github.io), including base-policy evaluation, on-policy constraint distillation, and post-training policy evaluation.
 
 ## Updates
 
@@ -34,7 +34,7 @@ This repository contains the code for running PACT on [RoboTwin](https://robotwi
 
 ## Installation
 
-We recommend using a Linux system with NVIDIA GPUs. Our experiments were conducted on RTX x090 GPUs (24 GB VRAM). For Diffusion Policy (DP) training, we use a per-GPU batch size of 128, demonstrating that the method is relatively memory efficient and can be trained comfortably within a budget less than 24 GB VRAM.
+We recommend using a Linux system with NVIDIA GPUs. Our experiments were conducted on RTX 4090 GPUs (24 GB VRAM). For Diffusion Policy (DP) training, we use a per-GPU batch size of 128, demonstrating that the method is relatively memory efficient and can be trained comfortably within a budget less than 24 GB VRAM.
 
 Clone this repository and create a conda environment:
 
@@ -83,7 +83,7 @@ Download the pretrained base policy checkpoints from [Hugging Face](https://hugg
 ```bash
 # generally, the structure is as follows:
 PACT/policy/DP/checkpoints/
-├── ${TASK_NAME}-demo_randomized-200-0/600.ckpt
+└── ${TASK_NAME}-demo_randomized-200-0/600.ckpt
 
 # concretely, the arranged structure containing all the released checkpoints is as follows:
 PACT/policy/DP/checkpoints/
@@ -102,7 +102,7 @@ Download the pre-generated instruction dataset `data.tar.gz` from [Hugging Face]
 # generally, the structure is as follows:
 PACT/data/
 ├── data/${TASK_NAME}/demo_randomized/instructions
-├── env_meta.pkl    # meta environment infomation shared by all tasks
+└── env_meta.pkl    # meta environment infomation shared by all tasks
 
 # concretely, the arranged structure containing all the released instruction datasets is as follows:
 PACT/data/
@@ -138,6 +138,22 @@ Run on-policy distillation from the repository root:
 # Train with four specified GPUs
 CUDA_VISIBLE_DEVICES=0,1,2,3 bash policy/DP/on_policy_distill_multigpu.sh pick_dual_bottles onpolicy_randomized 200 0 14
 ```
+
+> The default hyperparameters use a larger training budget to strengthen the compared baselines. For PACT, the proposed distillation objective is more efficient, so you can reduce the number of rollout trajectories and parameter updates by modifying `policy/DP/diffusion_policy/config/on_policy_robot_dp_distillation_14.yaml`:
+>
+> ```yaml
+> ...
+>
+> rollout:
+>   num_batches_per_epoch: 36  # original 72
+>
+> ...
+>
+> training:
+>   num_inner_epochs: 50  # original 100
+> ```
+>
+> If training becomes unstable for some tasks, such as `handover_apple`, try enabling soft updates by setting `training.decay_type` to `1` or `2` in the [config](policy/DP/diffusion_policy/config/on_policy_robot_dp_distillation_14.yaml). The default value `0` uses hard updates.
 
 ### Evaluate a PACT Post-Trained Policy
 
