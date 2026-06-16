@@ -153,7 +153,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 bash policy/DP/on_policy_distill_multigpu.sh pick_d
 >   num_inner_epochs: 50  # original 100
 > ```
 >
-> If training becomes unstable for some tasks, such as `handover_apple`, try enabling soft updates by setting `training.decay_type` to `1` or `2` in the [config](policy/DP/diffusion_policy/config/on_policy_robot_dp_distillation_14.yaml). The default value `0` uses hard updates.
+> If training becomes unstable for some tasks, such as `handover_apple` and `stack_blocks_two`, try enabling soft updates by setting `training.decay_type` to `3` in the [config](policy/DP/diffusion_policy/config/on_policy_robot_dp_distillation_14.yaml). The default value `0` uses hard updates.
 
 ### Evaluate a PACT Post-Trained Policy
 
